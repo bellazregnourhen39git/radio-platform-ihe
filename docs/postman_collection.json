@@ -1,0 +1,274 @@
+{
+  "info": {
+    "_postman_id": "a4b7f8e0-module1-radio-platform-2026",
+    "name": "RadioPlatform - Module 1 (SIH / RIS) API",
+    "description": "Collection Postman complète pour le Module 1 du parcours radiologique intégré (IHE A+F). Couvre l'authentification JWT, les dossiers patients, le cycle de vie de la demande d'examen, la Worklist DICOM et les endpoints FHIR R4.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "jwt_token", "value": "" },
+    { "key": "patient_id", "value": "" },
+    { "key": "exam_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Authentification JWT",
+      "item": [
+        {
+          "name": "Connexion Dr. Dupont (Médecin Demandeur)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dr.dupont\",\n  \"password\": \"demo\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login", ""] }
+          }
+        },
+        {
+          "name": "Connexion Dr. Martin (Radiologue)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dr.martin\",\n  \"password\": \"demo\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login", ""] }
+          }
+        },
+        {
+          "name": "Connexion Modalité Service (Module 2)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"modality_ct\",\n  \"password\": \"demo\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login", ""] }
+          }
+        },
+        {
+          "name": "Profil Utilisateur Connecté (/auth/me/)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/me/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "me", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Gestion des Patients",
+      "item": [
+        {
+          "name": "Lister les patients",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/patients/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "patients", ""] }
+          }
+        },
+        {
+          "name": "Rechercher un patient (nom ou IPP)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/patients/?search=BERNARD", "host": ["{{baseUrl}}"], "path": ["api", "v1", "patients", ""], "query": [{ "key": "search", "value": "BERNARD" }] }
+          }
+        },
+        {
+          "name": "Créer un nouveau patient (auto IPP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"FAURE\",\n  \"prenom\": \"Lucie\",\n  \"date_naissance\": \"1992-07-18\",\n  \"sexe\": \"F\",\n  \"telephone\": \"06 77 88 99 00\",\n  \"adresse\": \"18 cours Gambetta, 34000 Montpellier\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/patients/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "patients", ""] }
+          }
+        },
+        {
+          "name": "Historique des examens d'un patient",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/patients/{{patient_id}}/exams/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "patients", "{{patient_id}}", "exams", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Demandes d'Examens & Workflow",
+      "item": [
+        {
+          "name": "Lister les examens (filtre statut)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/?statut=PLANIFIE", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", ""], "query": [{ "key": "statut", "value": "PLANIFIE" }] }
+          }
+        },
+        {
+          "name": "Créer une demande d'examen (SIH -> ORM^O01)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"{{patient_id}}\",\n  \"modalite\": \"CT\",\n  \"region_anatomique\": \"Thorax\",\n  \"type_examen\": \"Scanner Thoracique injecté\",\n  \"indication_clinique\": \"Suspicion embolie pulmonaire aiguë\",\n  \"priorite\": \"URGENT\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", ""] }
+          }
+        },
+        {
+          "name": "Détail d'un examen (timeline & messages HL7)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/{{exam_id}}/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", "{{exam_id}}", ""] }
+          }
+        },
+        {
+          "name": "Planifier l'examen (RIS : DEMANDE -> PLANIFIE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date_planifiee\": \"2026-11-19T14:30:00Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/{{exam_id}}/schedule/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "schedule", ""] }
+          }
+        },
+        {
+          "name": "Fin d'acquisition (Module 2 : PLANIFIE -> REALISE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"study_instance_uid\": \"1.2.826.0.1.3680043.8.498.99881122\",\n  \"notes\": \"Acquisition sans incident sur console CT01\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/{{exam_id}}/mark-performed/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "mark-performed", ""] }
+          }
+        },
+        {
+          "name": "Sauvegarder brouillon compte rendu",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_text\": \"Brouillon en cours de relecture...\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/{{exam_id}}/save-report/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "save-report", ""] }
+          }
+        },
+        {
+          "name": "Valider compte rendu et terminer (ORU^R01)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_text\": \"INDICATION : Bilan suspect.\nRÉSULTATS : Intégrité parenchymateuse.\nCONCLUSION : Examen normal.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/{{exam_id}}/validate-report/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "validate-report", ""] }
+          }
+        },
+        {
+          "name": "Annuler la demande (avec motif obligatoire)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motif_annulation\": \"Patient transféré vers un centre hospitalier universitaire\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exams/{{exam_id}}/cancel/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "cancel", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Interopérabilité Santé (DICOM & FHIR R4)",
+      "item": [
+        {
+          "name": "DICOM Modality Worklist (C-FIND simulé)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/worklist/?status=PLANIFIE&modality=CT", "host": ["{{baseUrl}}"], "path": ["api", "v1", "worklist", ""], "query": [{ "key": "status", "value": "PLANIFIE" }, { "key": "modality", "value": "CT" }] }
+          }
+        },
+        {
+          "name": "FHIR R4 Patient",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/fhir/Patient/{{patient_id}}/", "host": ["{{baseUrl}}"], "path": ["fhir", "Patient", "{{patient_id}}", ""] }
+          }
+        },
+        {
+          "name": "FHIR R4 ServiceRequest (Demande)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/fhir/ServiceRequest/{{exam_id}}/", "host": ["{{baseUrl}}"], "path": ["fhir", "ServiceRequest", "{{exam_id}}", ""] }
+          }
+        },
+        {
+          "name": "FHIR R4 DiagnosticReport (Compte Rendu)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/fhir/DiagnosticReport/{{exam_id}}/", "host": ["{{baseUrl}}"], "path": ["fhir", "DiagnosticReport", "{{exam_id}}", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Audit & Documentation",
+      "item": [
+        {
+          "name": "Événements d'Audit (/api/v1/audit/)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/audit/", "host": ["{{baseUrl}}"], "path": ["api", "v1", "audit", ""] }
+          }
+        },
+        {
+          "name": "Schéma OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/schema/", "host": ["{{baseUrl}}"], "path": ["api", "schema", ""] }
+          }
+        }
+      ]
+    }
+  ]
+}
