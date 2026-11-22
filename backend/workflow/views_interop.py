@@ -219,6 +219,33 @@ class PacsUploadView(APIView):
             )
 
 
+class PacsSyncView(APIView):
+    """
+    Synchronise les études du PACS Orthanc avec les examens planifiés du RIS.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    @extend_schema(
+        summary="Synchroniser PACS avec la Worklist RIS",
+        description="Associe automatiquement les images disponibles dans Orthanc aux examens planifiés et les bascule à RÉALISÉ."
+    )
+    def post(self, request):
+        try:
+            from .pacs import sync_pacs_with_exams
+            exam_id = request.data.get('exam_id')
+            synced = sync_pacs_with_exams(actor=request.user, target_exam_id=exam_id)
+            return Response({
+                "message": f"{len(synced)} examen(s) synchronisé(s) avec succès avec le PACS.",
+                "synced": synced
+            })
+        except Exception as e:
+            logger.error(f"Erreur synchronisation PACS: {e}")
+            return Response(
+                {"detail": f"Erreur lors de la synchronisation PACS: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class FhirServiceRequestDetailView(APIView):
     """Exposition FHIR R4 de la demande d'examen (ServiceRequest)."""
     permission_classes = [permissions.AllowAny]
@@ -344,6 +371,33 @@ class PacsUploadView(APIView):
             )
 
 
+class PacsSyncView(APIView):
+    """
+    Synchronise les études du PACS Orthanc avec les examens planifiés du RIS.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    @extend_schema(
+        summary="Synchroniser PACS avec la Worklist RIS",
+        description="Associe automatiquement les images disponibles dans Orthanc aux examens planifiés et les bascule à RÉALISÉ."
+    )
+    def post(self, request):
+        try:
+            from .pacs import sync_pacs_with_exams
+            exam_id = request.data.get('exam_id')
+            synced = sync_pacs_with_exams(actor=request.user, target_exam_id=exam_id)
+            return Response({
+                "message": f"{len(synced)} examen(s) synchronisé(s) avec succès avec le PACS.",
+                "synced": synced
+            })
+        except Exception as e:
+            logger.error(f"Erreur synchronisation PACS: {e}")
+            return Response(
+                {"detail": f"Erreur lors de la synchronisation PACS: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class FhirDiagnosticReportDetailView(APIView):
     """Exposition FHIR R4 du compte rendu radiologique (DiagnosticReport)."""
     permission_classes = [permissions.AllowAny]
@@ -466,4 +520,31 @@ class PacsUploadView(APIView):
             return Response(
                 {"detail": f"Erreur lors de l'upload DICOM: {e}"},
                 status=status.HTTP_502_BAD_GATEWAY
+            )
+
+
+class PacsSyncView(APIView):
+    """
+    Synchronise les études du PACS Orthanc avec les examens planifiés du RIS.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    @extend_schema(
+        summary="Synchroniser PACS avec la Worklist RIS",
+        description="Associe automatiquement les images disponibles dans Orthanc aux examens planifiés et les bascule à RÉALISÉ."
+    )
+    def post(self, request):
+        try:
+            from .pacs import sync_pacs_with_exams
+            exam_id = request.data.get('exam_id')
+            synced = sync_pacs_with_exams(actor=request.user, target_exam_id=exam_id)
+            return Response({
+                "message": f"{len(synced)} examen(s) synchronisé(s) avec succès avec le PACS.",
+                "synced": synced
+            })
+        except Exception as e:
+            logger.error(f"Erreur synchronisation PACS: {e}")
+            return Response(
+                {"detail": f"Erreur lors de la synchronisation PACS: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

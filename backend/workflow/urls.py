@@ -13,7 +13,8 @@ from .views_interop import (
     FhirDiagnosticReportDetailView,
     PacsStudyDetailView,
     PacsInfoView,
-    PacsUploadView
+    PacsUploadView,
+    PacsSyncView
 )
 
 router = DefaultRouter()
@@ -35,6 +36,7 @@ urlpatterns = [
     path('exams/<uuid:exam_id>/pacs/', PacsStudyDetailView.as_view(), name='pacs_study_detail'),
     path('pacs/info/', PacsInfoView.as_view(), name='pacs_info'),
     path('pacs/upload/', PacsUploadView.as_view(), name='pacs_upload'),
+    path('pacs/sync/', PacsSyncView.as_view(), name='pacs_sync'),
 
     # Endpoints REST principaux (patients, examens, etc.)
     path('', include(router.urls)),

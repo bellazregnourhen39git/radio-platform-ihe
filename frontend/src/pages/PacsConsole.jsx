@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader';
 import PriorityBadge from '../components/PriorityBadge';
 import {
   HardDrive, RefreshCw, Eye, Upload, Database,
-  AlertCircle, CheckCircle2, Image, ExternalLink
+  AlertCircle, CheckCircle2, Image, ExternalLink, Zap
 } from 'lucide-react';
 
 export default function PacsConsole() {
@@ -13,6 +13,7 @@ export default function PacsConsole() {
   const [worklist, setWorklist] = useState([]);
   const [pacsInfo, setPacsInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -47,6 +48,23 @@ export default function PacsConsole() {
     fetchWorklist();
     fetchPacsInfo();
   }, []);
+
+  const handleSync = async (examId = null) => {
+    setSyncing(true);
+    setError('');
+    try {
+      const payload = examId ? { exam_id: examId } : {};
+      const res = await api.post('/pacs/sync/', payload);
+      setSuccessMsg(res.data.message || 'Synchronisation PACS réussie !');
+      setTimeout(() => setSuccessMsg(''), 5000);
+      await fetchWorklist();
+      await fetchPacsInfo();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erreur lors de la synchronisation PACS.');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const files = e.target.files;
@@ -85,15 +103,26 @@ export default function PacsConsole() {
         description="Worklist DICOM, upload d'images et consultation du PACS Orthanc."
         icon={HardDrive}
         actions={
-          <button
-            type="button"
-            onClick={() => { fetchWorklist(); fetchPacsInfo(); }}
-            disabled={loading}
-            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-lg border border-[#DCE6EF] bg-white px-3 text-[11px] font-medium text-[#54687A] transition hover:border-[#B9D2EA] hover:bg-[#F3F8FC] hover:text-[#1566C0] disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleSync()}
+              disabled={syncing || loading}
+              className="app-button-primary inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-[11px] font-medium text-white shadow-sm disabled:opacity-50"
+            >
+              <Zap className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Synchronisation en cours…' : 'Synchroniser PACS ↔ RIS'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { fetchWorklist(); fetchPacsInfo(); }}
+              disabled={loading || syncing}
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-[#DCE6EF] bg-white px-3 text-[11px] font-medium text-[#54687A] transition hover:border-[#B9D2EA] hover:bg-[#F3F8FC] hover:text-[#1566C0] disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Actualiser
+            </button>
+          </div>
         }
       />
 
@@ -209,6 +238,16 @@ export default function PacsConsole() {
                         <PriorityBadge priority={item.Priority} />
                       </td>
                       <td className="whitespace-nowrap px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleSync(item.ExamID)}
+                          disabled={syncing}
+                          className="mr-1.5 inline-flex h-8 items-center gap-1 rounded-lg bg-[#E6F0FB] px-2.5 text-[10px] font-medium text-[#1566C0] transition hover:bg-[#1566C0] hover:text-white disabled:opacity-50"
+                          title="Associer automatiquement une image du PACS à cet examen"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          Associer image
+                        </button>
                         <Link
                           to={`/exams/${item.ExamID}`}
                           className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#DCE6EF] px-2.5 text-[10px] font-medium text-[#54687A] hover:bg-[#F3F8FC] hover:text-[#1566C0]"

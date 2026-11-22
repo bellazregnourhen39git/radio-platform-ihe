@@ -108,3 +108,145 @@ def get_statistics():
     )
     resp.raise_for_status()
     return resp.json()
+
+
+def sync_pacs_with_exams(actor=None, target_exam_id=None):
+    """
+    Synchronise les études du PACS Orthanc avec les demandes d'examen du RIS :
+    - Associe les études non étiquetées aux examens PLANIFIÉS de la Worklist.
+    - Met à jour les tags DICOM (PatientID, PatientName, AccessionNumber) dans Orthanc.
+    - Bascule les examens au statut RÉALISÉ pour débloquer la visualisation OHIF et le compte rendu.
+    """
+    import io
+    import pydicom
+    from django.utils import timezone
+    from .models import ExamRequest, ExamStatusChoices, StatusHistory
+    from .audit import log_event
+
+    studies = list_all_studies()
+    exams_query = ExamRequest.objects.filter(statut=ExamStatusChoices.PLANIFIE).select_related('patient')
+
+    if target_exam_id:
+        exams_query = exams_query.filter(id=target_exam_id)
+
+    planned_exams = list(exams_query.order_by('date_demande'))
+    synced = []
+
+    # 1. Vérifier si des études ont déjà l'AccessionNumber
+    for study in list(studies):
+        acc = study.get('MainDicomTags', {}).get('AccessionNumber', '').strip()
+        study_uid = study.get('MainDicomTags', {}).get('StudyInstanceUID', '').strip()
+        if acc and study_uid:
+            match = next((e for e in planned_exams if e.accession_number == acc), None)
+            if match:
+                match.study_instance_uid = study_uid
+                match.statut = ExamStatusChoices.REALISE
+                match.date_realisation = timezone.now()
+                match.save(update_fields=['study_instance_uid', 'statut', 'date_realisation'])
+
+                StatusHistory.objects.create(
+                    exam=match,
+                    ancien_statut=ExamStatusChoices.PLANIFIE,
+                    nouveau_statut=ExamStatusChoices.REALISE,
+                    change_par=actor,
+                    commentaire=f"Synchronisation PACS automatique. StudyInstanceUID: {study_uid}"
+                )
+                log_event(
+                    actor=actor,
+                    action='PACS_AUTO_SYNC',
+                    resource_type='ExamRequest',
+                    resource_id=str(match.id),
+                    outcome='SUCCESS',
+                    details={'accession': acc, 'study_instance_uid': study_uid}
+                )
+                synced.append({
+                    'exam_id': str(match.id),
+                    'accession_number': acc,
+                    'patient': f"{match.patient.nom} {match.patient.prenom}",
+                    'study_instance_uid': study_uid,
+                    'action': 'linked'
+                })
+                planned_exams.remove(match)
+
+    # 2. Études sans AccessionNumber : leur attribuer l'examen et les réinsérer dans Orthanc
+    unlinked_studies = [
+        s for s in studies
+        if not s.get('MainDicomTags', {}).get('AccessionNumber', '').strip()
+    ]
+
+    for study in unlinked_studies:
+        if not planned_exams:
+            break
+        exam = planned_exams.pop(0)
+        study_id = study['ID']
+
+        # Récupérer l'instance et son fichier DICOM
+        try:
+            inst_resp = requests.get(
+                f"{_get_orthanc_url()}/studies/{study_id}/instances",
+                auth=_get_orthanc_auth(),
+                timeout=10
+            )
+            if not inst_resp.ok or not inst_resp.json():
+                continue
+
+            first_inst_id = inst_resp.json()[0]['ID']
+            file_resp = requests.get(
+                f"{_get_orthanc_url()}/instances/{first_inst_id}/file",
+                auth=_get_orthanc_auth(),
+                timeout=20
+            )
+            if not file_resp.ok:
+                continue
+
+            # Modifier les tags avec pydicom
+            ds = pydicom.dcmread(io.BytesIO(file_resp.content))
+            ds.PatientID = exam.patient.ipp
+            ds.PatientName = f"{exam.patient.nom}^{exam.patient.prenom}"
+            ds.AccessionNumber = exam.accession_number
+            study_uid = str(ds.StudyInstanceUID)
+
+            out = io.BytesIO()
+            ds.save_as(out)
+            upload_dicom_instance(out.getvalue())
+
+            # Supprimer l'ancienne étude non étiquetée
+            requests.delete(
+                f"{_get_orthanc_url()}/studies/{study_id}",
+                auth=_get_orthanc_auth(),
+                timeout=10
+            )
+
+            # Mettre à jour la demande d'examen
+            exam.study_instance_uid = study_uid
+            exam.statut = ExamStatusChoices.REALISE
+            exam.date_realisation = timezone.now()
+            exam.save(update_fields=['study_instance_uid', 'statut', 'date_realisation'])
+
+            StatusHistory.objects.create(
+                exam=exam,
+                ancien_statut=ExamStatusChoices.PLANIFIE,
+                nouveau_statut=ExamStatusChoices.REALISE,
+                change_par=actor,
+                commentaire=f"Synchronisation PACS & taggage automatique. StudyInstanceUID: {study_uid}"
+            )
+            log_event(
+                actor=actor,
+                action='PACS_AUTO_TAG_SYNC',
+                resource_type='ExamRequest',
+                resource_id=str(exam.id),
+                outcome='SUCCESS',
+                details={'accession': exam.accession_number, 'study_instance_uid': study_uid}
+            )
+
+            synced.append({
+                'exam_id': str(exam.id),
+                'accession_number': exam.accession_number,
+                'patient': f"{exam.patient.nom} {exam.patient.prenom}",
+                'study_instance_uid': study_uid,
+                'action': 'tagged_and_linked'
+            })
+        except Exception:
+            continue
+
+    return synced
