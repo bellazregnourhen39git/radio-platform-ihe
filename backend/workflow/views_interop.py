@@ -1,7 +1,10 @@
+import logging
+
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser
 from rest_framework import permissions, status
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
@@ -13,6 +16,8 @@ from .fhir import (
     exam_to_fhir_servicerequest_r4,
     exam_to_fhir_diagnosticreport_r4
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DicomWorklistView(APIView):
@@ -109,6 +114,111 @@ class FhirPatientDetailView(APIView):
         return Response(fhir_data, content_type="application/fhir+json; charset=utf-8")
 
 
+# =================================================================
+# Module 2 — Endpoints d'intégration PACS (Orthanc)
+# =================================================================
+
+class PacsStudyDetailView(APIView):
+    """
+    Proxy vers Orthanc pour récupérer les informations PACS
+    d'un examen ayant un StudyInstanceUID.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    @extend_schema(
+        summary="Détails PACS d'un examen",
+        description="Récupère les informations de l'étude DICOM associée à un examen.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    def get(self, request, exam_id):
+        exam = get_object_or_404(ExamRequest, id=exam_id)
+        if not exam.study_instance_uid:
+            return Response(
+                {"detail": "Aucune image DICOM associée à cet examen."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        result = {
+            "study_instance_uid": exam.study_instance_uid,
+            "accession_number": exam.accession_number,
+            "patient_ipp": exam.patient.ipp,
+            "ohif_viewer_url": f"/ohif/viewer?StudyInstanceUIDs={exam.study_instance_uid}"
+        }
+
+        try:
+            from .pacs import find_studies_by_uid, get_study_series
+            studies = find_studies_by_uid(exam.study_instance_uid)
+            result["orthanc_studies"] = studies
+        except Exception as e:
+            logger.warning(f"Impossible de contacter Orthanc: {e}")
+            result["orthanc_studies"] = []
+            result["orthanc_error"] = str(e)
+
+        log_event(
+            actor=request.user,
+            action='PACS_STUDY_READ',
+            resource_type='ExamRequest',
+            resource_id=str(exam.id),
+            outcome='SUCCESS',
+            details={'study_instance_uid': exam.study_instance_uid}
+        )
+
+        return Response(result)
+
+
+class PacsInfoView(APIView):
+    """Récupère les statistiques du PACS Orthanc (nombre d'études, séries, instances)."""
+    permission_classes = [IsClinicalStaff]
+
+    def get(self, request):
+        try:
+            from .pacs import get_statistics
+            stats = get_statistics()
+            return Response(stats)
+        except Exception as e:
+            logger.warning(f"Impossible de contacter Orthanc: {e}")
+            return Response(
+                {"detail": f"PACS Orthanc indisponible: {e}"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class PacsUploadView(APIView):
+    """Upload d'un fichier DICOM vers Orthanc via le backend."""
+    permission_classes = [IsModaliteServiceOrRadiologue]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response(
+                {"detail": "Aucun fichier DICOM fourni."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from .pacs import upload_dicom_instance
+            dicom_bytes = file.read()
+            result = upload_dicom_instance(dicom_bytes)
+
+            log_event(
+                actor=request.user,
+                action='PACS_DICOM_UPLOAD',
+                resource_type='DicomInstance',
+                resource_id=result.get('ID', 'unknown'),
+                outcome='SUCCESS',
+                details={'filename': file.name, 'status': result.get('Status', '')}
+            )
+
+            return Response(result, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Erreur upload DICOM: {e}")
+            return Response(
+                {"detail": f"Erreur lors de l'upload DICOM: {e}"},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+
 class FhirServiceRequestDetailView(APIView):
     """Exposition FHIR R4 de la demande d'examen (ServiceRequest)."""
     permission_classes = [permissions.AllowAny]
@@ -129,6 +239,111 @@ class FhirServiceRequestDetailView(APIView):
         return Response(fhir_data, content_type="application/fhir+json; charset=utf-8")
 
 
+# =================================================================
+# Module 2 — Endpoints d'intégration PACS (Orthanc)
+# =================================================================
+
+class PacsStudyDetailView(APIView):
+    """
+    Proxy vers Orthanc pour récupérer les informations PACS
+    d'un examen ayant un StudyInstanceUID.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    @extend_schema(
+        summary="Détails PACS d'un examen",
+        description="Récupère les informations de l'étude DICOM associée à un examen.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    def get(self, request, exam_id):
+        exam = get_object_or_404(ExamRequest, id=exam_id)
+        if not exam.study_instance_uid:
+            return Response(
+                {"detail": "Aucune image DICOM associée à cet examen."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        result = {
+            "study_instance_uid": exam.study_instance_uid,
+            "accession_number": exam.accession_number,
+            "patient_ipp": exam.patient.ipp,
+            "ohif_viewer_url": f"/ohif/viewer?StudyInstanceUIDs={exam.study_instance_uid}"
+        }
+
+        try:
+            from .pacs import find_studies_by_uid, get_study_series
+            studies = find_studies_by_uid(exam.study_instance_uid)
+            result["orthanc_studies"] = studies
+        except Exception as e:
+            logger.warning(f"Impossible de contacter Orthanc: {e}")
+            result["orthanc_studies"] = []
+            result["orthanc_error"] = str(e)
+
+        log_event(
+            actor=request.user,
+            action='PACS_STUDY_READ',
+            resource_type='ExamRequest',
+            resource_id=str(exam.id),
+            outcome='SUCCESS',
+            details={'study_instance_uid': exam.study_instance_uid}
+        )
+
+        return Response(result)
+
+
+class PacsInfoView(APIView):
+    """Récupère les statistiques du PACS Orthanc (nombre d'études, séries, instances)."""
+    permission_classes = [IsClinicalStaff]
+
+    def get(self, request):
+        try:
+            from .pacs import get_statistics
+            stats = get_statistics()
+            return Response(stats)
+        except Exception as e:
+            logger.warning(f"Impossible de contacter Orthanc: {e}")
+            return Response(
+                {"detail": f"PACS Orthanc indisponible: {e}"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class PacsUploadView(APIView):
+    """Upload d'un fichier DICOM vers Orthanc via le backend."""
+    permission_classes = [IsModaliteServiceOrRadiologue]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response(
+                {"detail": "Aucun fichier DICOM fourni."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from .pacs import upload_dicom_instance
+            dicom_bytes = file.read()
+            result = upload_dicom_instance(dicom_bytes)
+
+            log_event(
+                actor=request.user,
+                action='PACS_DICOM_UPLOAD',
+                resource_type='DicomInstance',
+                resource_id=result.get('ID', 'unknown'),
+                outcome='SUCCESS',
+                details={'filename': file.name, 'status': result.get('Status', '')}
+            )
+
+            return Response(result, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Erreur upload DICOM: {e}")
+            return Response(
+                {"detail": f"Erreur lors de l'upload DICOM: {e}"},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+
 class FhirDiagnosticReportDetailView(APIView):
     """Exposition FHIR R4 du compte rendu radiologique (DiagnosticReport)."""
     permission_classes = [permissions.AllowAny]
@@ -147,3 +362,108 @@ class FhirDiagnosticReportDetailView(APIView):
         )
 
         return Response(fhir_data, content_type="application/fhir+json; charset=utf-8")
+
+
+# =================================================================
+# Module 2 — Endpoints d'intégration PACS (Orthanc)
+# =================================================================
+
+class PacsStudyDetailView(APIView):
+    """
+    Proxy vers Orthanc pour récupérer les informations PACS
+    d'un examen ayant un StudyInstanceUID.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    @extend_schema(
+        summary="Détails PACS d'un examen",
+        description="Récupère les informations de l'étude DICOM associée à un examen.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    def get(self, request, exam_id):
+        exam = get_object_or_404(ExamRequest, id=exam_id)
+        if not exam.study_instance_uid:
+            return Response(
+                {"detail": "Aucune image DICOM associée à cet examen."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        result = {
+            "study_instance_uid": exam.study_instance_uid,
+            "accession_number": exam.accession_number,
+            "patient_ipp": exam.patient.ipp,
+            "ohif_viewer_url": f"/ohif/viewer?StudyInstanceUIDs={exam.study_instance_uid}"
+        }
+
+        try:
+            from .pacs import find_studies_by_uid, get_study_series
+            studies = find_studies_by_uid(exam.study_instance_uid)
+            result["orthanc_studies"] = studies
+        except Exception as e:
+            logger.warning(f"Impossible de contacter Orthanc: {e}")
+            result["orthanc_studies"] = []
+            result["orthanc_error"] = str(e)
+
+        log_event(
+            actor=request.user,
+            action='PACS_STUDY_READ',
+            resource_type='ExamRequest',
+            resource_id=str(exam.id),
+            outcome='SUCCESS',
+            details={'study_instance_uid': exam.study_instance_uid}
+        )
+
+        return Response(result)
+
+
+class PacsInfoView(APIView):
+    """Récupère les statistiques du PACS Orthanc (nombre d'études, séries, instances)."""
+    permission_classes = [IsClinicalStaff]
+
+    def get(self, request):
+        try:
+            from .pacs import get_statistics
+            stats = get_statistics()
+            return Response(stats)
+        except Exception as e:
+            logger.warning(f"Impossible de contacter Orthanc: {e}")
+            return Response(
+                {"detail": f"PACS Orthanc indisponible: {e}"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class PacsUploadView(APIView):
+    """Upload d'un fichier DICOM vers Orthanc via le backend."""
+    permission_classes = [IsModaliteServiceOrRadiologue]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response(
+                {"detail": "Aucun fichier DICOM fourni."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from .pacs import upload_dicom_instance
+            dicom_bytes = file.read()
+            result = upload_dicom_instance(dicom_bytes)
+
+            log_event(
+                actor=request.user,
+                action='PACS_DICOM_UPLOAD',
+                resource_type='DicomInstance',
+                resource_id=result.get('ID', 'unknown'),
+                outcome='SUCCESS',
+                details={'filename': file.name, 'status': result.get('Status', '')}
+            )
+
+            return Response(result, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Erreur upload DICOM: {e}")
+            return Response(
+                {"detail": f"Erreur lors de l'upload DICOM: {e}"},
+                status=status.HTTP_502_BAD_GATEWAY
+            )

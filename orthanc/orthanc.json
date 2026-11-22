@@ -1,0 +1,39 @@
+{
+  "Name": "RadioPlatformPACS",
+  "DicomAet": "ORTHANC",
+  "DicomPort": 4242,
+  "HttpPort": 8042,
+
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": false,
+  "HttpCors": true,
+  "HttpHeaders": {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
+    "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization, Range, X-Total-Count",
+    "Access-Control-Expose-Headers": "Content-Length, Content-Range, Content-Type, X-Total-Count"
+  },
+  "RegisteredUsers": {
+    "orthanc": "orthanc",
+    "ohif": "ohif"
+  },
+
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "StudiesMetadata": "MainDicomTags"
+  },
+
+  "LuaScripts": [
+    "/etc/orthanc/on_stable_study.lua"
+  ],
+
+  "StableAge": 10,
+
+  "DicomModalities": {
+    "MOD_CT01": ["MOD_CT01", "localhost", 11112],
+    "MOD_MR01": ["MOD_MR01", "localhost", 11113]
+  }
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, Users, FilePlus, CalendarDays, Shield, LogOut } from 'lucide-react';
+import { Activity, Users, FilePlus, CalendarDays, Shield, LogOut, HardDrive } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ open, onClose, collapsed = false }) {
@@ -11,6 +11,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
   const links = [
     { path: '/dashboard', label: 'Tableau de bord', icon: Activity, roles: ['MEDECIN_DEMANDEUR', 'RADIOLOGUE', 'ADMIN'] },
     { path: '/ris', label: 'Console RIS', icon: CalendarDays, roles: ['RADIOLOGUE', 'ADMIN'] },
+    { path: '/pacs', label: 'Console PACS', icon: HardDrive, roles: ['RADIOLOGUE', 'ADMIN', 'MODALITE_SERVICE'] },
     { path: '/patients', label: 'Patients', icon: Users, roles: ['MEDECIN_DEMANDEUR', 'RADIOLOGUE', 'ADMIN'] },
     { path: '/exams/new', label: 'Nouvelle prescription', icon: FilePlus, roles: ['MEDECIN_DEMANDEUR', 'ADMIN'] },
     { path: '/audit', label: "Journal d'audit", icon: Shield, roles: ['ADMIN'] },

@@ -7,3 +7,4 @@ drf-spectacular>=0.28.0
 psycopg2-binary>=2.9.9
 hl7>=0.4.5
 pydicom>=3.0.1
+requests>=2.32.0

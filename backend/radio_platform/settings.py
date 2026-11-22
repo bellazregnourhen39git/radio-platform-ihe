@@ -150,3 +150,10 @@ SPECTACULAR_SETTINGS = {
 # CORS configuration
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# =================================================================
+# Module 2 — Orthanc PACS Integration
+# =================================================================
+ORTHANC_URL = os.environ.get('ORTHANC_URL', 'http://orthanc:8042')
+ORTHANC_USER = os.environ.get('ORTHANC_USER', 'orthanc')
+ORTHANC_PASS = os.environ.get('ORTHANC_PASS', 'orthanc')

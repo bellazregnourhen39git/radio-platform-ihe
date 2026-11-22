@@ -10,7 +10,10 @@ from .views_interop import (
     DicomWorklistView,
     FhirPatientDetailView,
     FhirServiceRequestDetailView,
-    FhirDiagnosticReportDetailView
+    FhirDiagnosticReportDetailView,
+    PacsStudyDetailView,
+    PacsInfoView,
+    PacsUploadView
 )
 
 router = DefaultRouter()
@@ -27,6 +30,11 @@ urlpatterns = [
 
     # DICOM Modality Worklist (Point d'intégration Module 2)
     path('worklist/', DicomWorklistView.as_view(), name='dicom_worklist'),
+
+    # Module 2 — Endpoints d'intégration PACS (Orthanc)
+    path('exams/<uuid:exam_id>/pacs/', PacsStudyDetailView.as_view(), name='pacs_study_detail'),
+    path('pacs/info/', PacsInfoView.as_view(), name='pacs_info'),
+    path('pacs/upload/', PacsUploadView.as_view(), name='pacs_upload'),
 
     # Endpoints REST principaux (patients, examens, etc.)
     path('', include(router.urls)),

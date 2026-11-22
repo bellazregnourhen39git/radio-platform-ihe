@@ -13,6 +13,7 @@ import NewExam from './pages/NewExam';
 import RisConsole from './pages/RisConsole';
 import ExamDetail from './pages/ExamDetail';
 import AuditLogs from './pages/AuditLogs';
+import PacsConsole from './pages/PacsConsole';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/exams/new" element={<ProtectedRoute><NewExam /></ProtectedRoute>} />
           <Route path="/exams/:id" element={<ProtectedRoute><ExamDetail /></ProtectedRoute>} />
           <Route path="/ris" element={<ProtectedRoute><RisConsole /></ProtectedRoute>} />
+          <Route path="/pacs" element={<ProtectedRoute><PacsConsole /></ProtectedRoute>} />
           <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

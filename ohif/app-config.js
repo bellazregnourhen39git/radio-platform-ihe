@@ -1,0 +1,36 @@
+/** @type {AppTypes.Config} */
+window.config = {
+  routerBasename: '/',
+  extensions: [],
+  modes: [],
+  customizationService: {},
+  showStudyList: true,
+  maxNumberOfWebWorkers: 3,
+  showWarningMessageForCrossOrigin: false,
+  showCPUFallbackMessage: true,
+  showLoadingIndicator: true,
+  strictZSpacingForVolumeViewport: true,
+  groupEnabledModesFirst: true,
+  defaultDataSourceName: 'orthanc',
+  dataSources: [
+    {
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'orthanc',
+      configuration: {
+        friendlyName: 'Orthanc PACS — RadioPlatform',
+        name: 'orthanc',
+        wadoUriRoot: '/wado',
+        qidoRoot: '/dicom-web',
+        wadoRoot: '/dicom-web',
+        qidoSupportsIncludeField: false,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: false,
+        supportsWildcard: true,
+        staticWado: true,
+        singlepart: 'bulkdata,video,pdf',
+      },
+    },
+  ],
+};

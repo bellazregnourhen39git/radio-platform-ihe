@@ -4,6 +4,7 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
+import DicomViewer from '../components/DicomViewer';
 import { 
   Activity, Clock, User, FileText, CheckCircle2, AlertCircle, Send, Image,
   Share2, Copy, Check, X, AlertTriangle, Stethoscope
@@ -394,44 +395,9 @@ export default function ExamDetail() {
             </div>
           )}
 
-          {/* TAB 4: PLACEHOLDER PACS / MODULE 2 */}
+          {/* TAB 4: VISUALISEUR DICOM / PACS (Module 2) */}
           {activeTab === 'pacs' && (
-            <div className="rounded-xl border border-[#DCE6EF] bg-[#EEF4FA] p-6 text-center">
-              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#E6F0FB] text-[#1566C0]">
-                <Image className="w-6 h-6" />
-              </div>
-              <h3 className="text-[14px] font-semibold text-[#0F2233]">
-                Point d'Intégration Module 2 — Visualiseur DICOM / PACS
-              </h3>
-              <p className="mx-auto mt-1 max-w-lg text-[11px] leading-5 text-[#54687A]">
-                Le Module 2 consomme la worklist (<code className="rounded bg-[#E6F0FB] px-1 py-0.5 font-mono text-[#1566C0]">/api/v1/worklist/</code>) et notifie la fin d'acquisition via <code className="rounded bg-[#E6F0FB] px-1 py-0.5 font-mono text-[#1566C0]">POST /api/v1/exams/{exam.id}/mark-performed/</code>.
-              </p>
-
-              <div className="mx-auto mt-4 max-w-md space-y-2 rounded-lg border border-[#DCE6EF] bg-white p-4 text-left text-[11px]">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">StudyInstanceUID :</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {exam.study_instance_uid || 'En attente d\'acquisition DICOM'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Statut Imagerie :</span>
-                  <span className={`font-semibold ${exam.study_instance_uid ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {exam.study_instance_uid ? 'Série DICOM indexée' : 'Aucune image'}
-                  </span>
-                </div>
-              </div>
-
-              {exam.study_instance_uid && (
-                <button
-                  onClick={() => alert(`Lancement du visualiseur DICOM pour la série ${exam.study_instance_uid} (Module 2 Cornerstone3D / OHIF)`)}
-                  className="app-button-primary mt-4 inline-flex h-9 items-center gap-2 px-4 text-[11px] font-medium text-white"
-                >
-                  <Eye className="w-4 h-4" />
-                  Ouvrir l'examen dans le visualiseur DICOM
-                </button>
-              )}
-            </div>
+            <DicomViewer studyInstanceUID={exam.study_instance_uid} />
           )}
 
           {/* TAB 5: PLACEHOLDER TÉLÉEXPERTISE / MODULE 3 */}
