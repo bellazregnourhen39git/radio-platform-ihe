@@ -13,6 +13,7 @@ from .views_interop import (
     FhirDiagnosticReportDetailView,
     PacsStudyDetailView,
     PacsInfoView,
+    PacsStudiesListView,
     PacsUploadView,
     PacsSyncView
 )
@@ -35,6 +36,7 @@ urlpatterns = [
     # Module 2 — Endpoints d'intégration PACS (Orthanc)
     path('exams/<uuid:exam_id>/pacs/', PacsStudyDetailView.as_view(), name='pacs_study_detail'),
     path('pacs/info/', PacsInfoView.as_view(), name='pacs_info'),
+    path('pacs/studies/', PacsStudiesListView.as_view(), name='pacs_studies_list'),
     path('pacs/upload/', PacsUploadView.as_view(), name='pacs_upload'),
     path('pacs/sync/', PacsSyncView.as_view(), name='pacs_sync'),
 

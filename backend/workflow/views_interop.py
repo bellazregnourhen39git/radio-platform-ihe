@@ -183,6 +183,44 @@ class PacsInfoView(APIView):
             )
 
 
+class PacsStudiesListView(APIView):
+    """
+    Récupère la liste des études DICOM stockées dans le serveur PACS Orthanc
+    pour affichage et consultation directe dans la console PACS.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    def get(self, request):
+        try:
+            from .pacs import list_all_studies
+            raw_studies = list_all_studies()
+            formatted = []
+            for s in raw_studies:
+                main_tags = s.get('MainDicomTags', {})
+                patient_tags = s.get('PatientMainDicomTags', {})
+                formatted.append({
+                    'id': s.get('ID'),
+                    'study_instance_uid': main_tags.get('StudyInstanceUID', ''),
+                    'accession_number': main_tags.get('AccessionNumber', ''),
+                    'study_date': main_tags.get('StudyDate', ''),
+                    'study_time': main_tags.get('StudyTime', ''),
+                    'study_description': main_tags.get('StudyDescription', ''),
+                    'patient_id': patient_tags.get('PatientID', ''),
+                    'patient_name': patient_tags.get('PatientName', '').replace('^', ' '),
+                    'patient_sex': patient_tags.get('PatientSex', ''),
+                    'series_count': len(s.get('Series', [])),
+                    'is_stable': s.get('IsStable', False),
+                    'last_update': s.get('LastUpdate', '')
+                })
+            return Response(formatted)
+        except Exception as e:
+            logger.error(f"Erreur récupération études PACS: {e}")
+            return Response(
+                {"detail": f"Erreur lors de la récupération des études PACS: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class PacsUploadView(APIView):
     """Upload d'un fichier DICOM vers Orthanc via le backend."""
     permission_classes = [IsModaliteServiceOrRadiologue]
@@ -335,6 +373,44 @@ class PacsInfoView(APIView):
             )
 
 
+class PacsStudiesListView(APIView):
+    """
+    Récupère la liste des études DICOM stockées dans le serveur PACS Orthanc
+    pour affichage et consultation directe dans la console PACS.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    def get(self, request):
+        try:
+            from .pacs import list_all_studies
+            raw_studies = list_all_studies()
+            formatted = []
+            for s in raw_studies:
+                main_tags = s.get('MainDicomTags', {})
+                patient_tags = s.get('PatientMainDicomTags', {})
+                formatted.append({
+                    'id': s.get('ID'),
+                    'study_instance_uid': main_tags.get('StudyInstanceUID', ''),
+                    'accession_number': main_tags.get('AccessionNumber', ''),
+                    'study_date': main_tags.get('StudyDate', ''),
+                    'study_time': main_tags.get('StudyTime', ''),
+                    'study_description': main_tags.get('StudyDescription', ''),
+                    'patient_id': patient_tags.get('PatientID', ''),
+                    'patient_name': patient_tags.get('PatientName', '').replace('^', ' '),
+                    'patient_sex': patient_tags.get('PatientSex', ''),
+                    'series_count': len(s.get('Series', [])),
+                    'is_stable': s.get('IsStable', False),
+                    'last_update': s.get('LastUpdate', '')
+                })
+            return Response(formatted)
+        except Exception as e:
+            logger.error(f"Erreur récupération études PACS: {e}")
+            return Response(
+                {"detail": f"Erreur lors de la récupération des études PACS: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class PacsUploadView(APIView):
     """Upload d'un fichier DICOM vers Orthanc via le backend."""
     permission_classes = [IsModaliteServiceOrRadiologue]
@@ -484,6 +560,44 @@ class PacsInfoView(APIView):
             return Response(
                 {"detail": f"PACS Orthanc indisponible: {e}"},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class PacsStudiesListView(APIView):
+    """
+    Récupère la liste des études DICOM stockées dans le serveur PACS Orthanc
+    pour affichage et consultation directe dans la console PACS.
+    """
+    permission_classes = [IsClinicalStaff]
+
+    def get(self, request):
+        try:
+            from .pacs import list_all_studies
+            raw_studies = list_all_studies()
+            formatted = []
+            for s in raw_studies:
+                main_tags = s.get('MainDicomTags', {})
+                patient_tags = s.get('PatientMainDicomTags', {})
+                formatted.append({
+                    'id': s.get('ID'),
+                    'study_instance_uid': main_tags.get('StudyInstanceUID', ''),
+                    'accession_number': main_tags.get('AccessionNumber', ''),
+                    'study_date': main_tags.get('StudyDate', ''),
+                    'study_time': main_tags.get('StudyTime', ''),
+                    'study_description': main_tags.get('StudyDescription', ''),
+                    'patient_id': patient_tags.get('PatientID', ''),
+                    'patient_name': patient_tags.get('PatientName', '').replace('^', ' '),
+                    'patient_sex': patient_tags.get('PatientSex', ''),
+                    'series_count': len(s.get('Series', [])),
+                    'is_stable': s.get('IsStable', False),
+                    'last_update': s.get('LastUpdate', '')
+                })
+            return Response(formatted)
+        except Exception as e:
+            logger.error(f"Erreur récupération études PACS: {e}")
+            return Response(
+                {"detail": f"Erreur lors de la récupération des études PACS: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
