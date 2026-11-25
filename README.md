@@ -84,7 +84,9 @@ Le workflow suit scrupuleusement le profil **IHE Scheduled Workflow (SWF.b)** :
   - Permissions isolées dans `workflow/permissions.py` prêtes pour IUA / OAuth2 / SMART on FHIR.
   - IPP stable (`IPP-AAAA-XXXXX`) prêt pour PIXm/PDQm.
 
-Pour plus de détails techniques, consultez le document [Contrat d'Intégration complet](docs/integration_contract.md).
+Pour plus de détails techniques, consultez :
+- [Guide d'intégration Module 2 pour la Personne 3 (Téléexpertise)](docs/guide_p2_pour_p3.md)
+- [Contrat d'Intégration complet inter-modules](docs/integration_contract.md)
 
 ---
 
